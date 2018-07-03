@@ -8,7 +8,7 @@ Nice to have undefcategory or the like
   (:use #:common-lisp)
   (:documentation "A Common Lisp logging library; CLLL? No, it's log5. Log5 is organized around 5 things:
 
-* Categories, 
+* Categories,
 * Senders,
 * Outputs,
 * Messages, and
@@ -94,7 +94,7 @@ Nice to have undefcategory or the like
 (define-condition bad-category-type-error (error)
   ((name :initform nil :initarg :name :reader name))
   (:report (lambda (c s)
-	     (format s "Category names must be strings or symbols and ~s is neither." 
+	     (format s "Category names must be strings or symbols and ~s is neither."
 		     (name c)))))
 
 (define-condition simple-category-not-found-error (error)
@@ -152,15 +152,15 @@ Nice to have undefcategory or the like
 	 (console (log5-debug-console manager)))
     (labels ((find-or-create-output (sender)
 	       (or (cdr (assoc (message-creator-class sender) outputs))
-		   (let ((result (create-message-for-sender 
-				  sender message (funcall arg-thunk)))) 
+		   (let ((result (create-message-for-sender
+				  sender message (funcall arg-thunk))))
 		     (push (cons (message-creator-class sender) result)
 			   outputs)
 		     result)))
 	     (handle-message-for-sender (sender)
 	       (update-active-categories sender id)
 	       (when (= (sbit (active-categories sender) id) 1)
-		 (funcall (handle-message-fn sender) 
+		 (funcall (handle-message-fn sender)
 			  id sender (find-or-create-output sender)))))
       (declare (dynamic-extent (function find-or-create-output)
 			       (function handle-message-for-sender)))
@@ -179,7 +179,7 @@ Nice to have undefcategory or the like
     (or (and (log5-debug-console (log-manager))
 	     (active? (log5-debug-console (log-manager))))
 	(some #'active? (log5-senders (log-manager))))))
-	
+
 
 #|
 (defcategory :error)
@@ -191,7 +191,7 @@ Nice to have undefcategory or the like
   "Anything having to do with merging")
 (defcategory index-merge (index merge)
   "Merging or indexing")
-(defcategory non-file-index-merge (and (index merge) (not file-system)) 
+(defcategory non-file-index-merge (and (index merge) (not file-system))
   "Non-file-system related index and merge activities")
 |#
 
@@ -206,7 +206,7 @@ Nice to have undefcategory or the like
   (setf *category-specs* (make-hash-table :test #'equal)
 	*name->category* (make-hash-table :test #'equal)
 	*id->category* (make-hash-table :test #'eql)))
-  
+
 (defmacro defcategory (name &optional category-spec documentation)
   "Define a category named `name`. This can be a simple category like
 
@@ -218,14 +218,14 @@ of a complex category like
     (defcategory :bad-thing (or :error :warning :fatal))
     (defcategory non-file-foo (and (or foo bar biz) (not file-access)))
 
-Specifically, a simple category is just a name whereas a complex category is a boolean combination of other categories (either simple or complex). See `category-specs` if you want a list of defined categories." 
+Specifically, a simple category is just a name whereas a complex category is a boolean combination of other categories (either simple or complex). See `category-specs` if you want a list of defined categories."
   `(eval-when (:compile-toplevel :load-toplevel :execute)
-     (update-category-spec 
+     (update-category-spec
       ',name ',category-spec
       ,@(when documentation `(:documentation ,documentation)))))
 
 (defstruct (log-category (:conc-name category-)
-			 (:print-object print-category)) 
+			 (:print-object print-category))
   name
   specification
   documentation
@@ -238,18 +238,18 @@ Specifically, a simple category is just a name whereas a complex category is a b
   (print-unreadable-object (category stream :type nil :identity nil)
     (format  stream "category ~d: " (category-id category))
     (if (null (category-specification category))
-	(format stream "~a" 
+	(format stream "~a"
 		(category-name category))
 	(format stream "~@[~a -> ~]~a"
 		(category-name category) (category-specification category)))))
 
-(defun update-category-spec (name specification &key 
+(defun update-category-spec (name specification &key
 			     (documentation nil documentation-supplied?))
   (declare (ignore documentation documentation-supplied?))
   (let* ((use-spec (canonize-category-specification specification))
 	 (use-name (or (and name (canonize-category-name name :simple? t))
 		       use-spec)))
-    (multiple-value-bind (value found?) 
+    (multiple-value-bind (value found?)
 	(gethash use-name *category-specs*)
       (unless found?
 	(setf value (make-log-category
@@ -288,14 +288,14 @@ Specifically, a simple category is just a name whereas a complex category is a b
   (gethash name *name->category*))
 
 (defun canonize-category-name (name &key (simple? nil))
-  (let ((use-name 
+  (let ((use-name
 	 (typecase name
 	   (string (intern name *package*))
 	   (symbol (if (eq (symbol-package name) (find-package :keyword))
 		       (intern (symbol-name name) *package*)
 		       name))
 	   (t (error 'bad-category-type-error :name name)))))
-    (when (not (or simple? 
+    (when (not (or simple?
 		   (name->category use-name)
 		   (logical-connective-p use-name)))
       (error 'simple-category-not-found-error :name name))
@@ -304,7 +304,7 @@ Specifically, a simple category is just a name whereas a complex category is a b
 (defun canonize-category-specification (specification)
   (labels ((doit (x)
 	     (cond ((null x) nil)
-		   ((atom x) 
+		   ((atom x)
 		    (expand-category (canonize-category-name x)))
 		   ((listp x)
 		    `(,@(unless (logical-connective-p (first x))
@@ -318,7 +318,7 @@ Specifically, a simple category is just a name whereas a complex category is a b
 
 (defun expand-category (name)
   (let ((spec (gethash name *name->category*)))
-    (if spec 
+    (if spec
 	(or (category-expanded-specification spec) name)
 	name)))
 
@@ -340,12 +340,12 @@ this but it can be handy if you need a clean slate."
   name form (format "~a") static?)
 
 (defmacro defoutput (name form &key format static?)
-  "Define an output specification: a link between a `name` and a `form` that will be called during logging to put something in the log file. 
-You can specify a `format` string (as in a call to `format`) with the 
+  "Define an output specification: a link between a `name` and a `form` that will be called during logging to put something in the log file.
+You can specify a `format` string (as in a call to `format`) with the
 :format keyword argument. You can use the keyword :static? to indicate
 that the form's value will not change (e.g., the time of day is _not_
 static but the process id of the current Lisp is)."
-  `(update-output-spec ',name ',form 
+  `(update-output-spec ',name ',form
 			 ,@(when format `(:format ,format))
 			 ,@(when static? `(:static? t))))
 
@@ -363,7 +363,7 @@ static but the process id of the current Lisp is)."
   "Returns a list of the current output specs in alphatetical order."
   (sort
    (nconc
-    (collect-key-value 
+    (collect-key-value
      *output-specs*
      :transform (lambda (k v) (declare (ignore v)) k))
     (built-in-output-specs))
@@ -382,7 +382,7 @@ static but the process id of the current Lisp is)."
 
 (defun collect-key-value (ht &key (transform 'cons))
   (let ((result nil))
-    (maphash (lambda (k v) 
+    (maphash (lambda (k v)
 	       (push (funcall transform k v) result))
 	     ht)
     result))
@@ -393,16 +393,16 @@ static but the process id of the current Lisp is)."
 
 ;;?? FIXME - cache this
 (defun make-indent-space ()
-  (make-string 
+  (make-string
    (loop for (indent . nil) in (log5-indents (log-manager)) sum (or indent 0))
    :initial-element #\Space))
 
 ;;?? find duplicates
-(defmacro start-sender (name (sender-type &rest args) &key 
+(defmacro start-sender (name (sender-type &rest args) &key
 			category-spec output-spec)
   "Create a log-message sender and add it to the list of active
 senders. Each sender  has a `name`, a category-spec, an output-spec and
-a class (with optional initialization arguments). The `name` should be 
+a class (with optional initialization arguments). The `name` should be
 symbol and only one sender of any particular name can exist at a time.
 
 The category-spec is a boolean combination of categories (see `defcategory`).
@@ -417,12 +417,12 @@ include strings and the special, predefined, outputs:
 * category - the value of the category of the current message
 "
   `(start-sender-fn
-    ,name 
+    ,name
     ,category-spec
     ,output-spec
-    ',sender-type 
+    ',sender-type
     ,@args))
-    
+
 (defmacro start-stream-sender (name location &key output-spec category-spec)
   `(start-sender ,name
 		 (stream-sender :location ,location)
@@ -431,17 +431,17 @@ include strings and the special, predefined, outputs:
 		 ,@(when category-spec
 			 `(:category-spec ,category-spec))))
 
-(defun start-sender-fn (name category-spec output-spec 
+(defun start-sender-fn (name category-spec output-spec
 			sender-type &rest args)
   ;; stop any current one with the same name... warn?
   (stop-sender-fn name :warn-if-not-found-p nil)
-  (let ((sender (apply #'make-instance 
-		 sender-type 
+  (let ((sender (apply #'make-instance
+		 sender-type
 		 :name name
 		 :category-spec
 		 (canonize-category-specification category-spec)
-		 :output-spec 
-		 (if (consp output-spec) 
+		 :output-spec
+		 (if (consp output-spec)
 		     output-spec (list output-spec))
 		 args)))
     (push sender (log5-senders (log-manager)))
@@ -454,12 +454,12 @@ set to nil."
   `(progn (stop-sender-fn ,name :warn-if-not-found-p ,warn-if-not-found-p) nil))
 
 (defun stop-sender-fn (name &key (warn-if-not-found-p t))
-  (let ((sender (find name (log5-senders (log-manager)) 
-		      :key #'name))) 	
+  (let ((sender (find name (log5-senders (log-manager))
+		      :key #'name)))
     (cond (sender
 	   (close-sender sender)
-	   (setf (log5-senders (log-manager)) 
-		 (remove name (log5-senders (log-manager)) 
+	   (setf (log5-senders (log-manager))
+		 (remove name (log5-senders (log-manager))
 			 :key #'name))
 	   sender)
 	  (t
@@ -497,11 +497,11 @@ should descend."))
 (defmethod print-sender ((sender basic-sender) stream)
   (format stream "~a" (name sender)))
 
-(defmethod initialize-instance 
-    :after ((object basic-sender) &key 
+(defmethod initialize-instance
+    :after ((object basic-sender) &key
 	    message-creator (message-creator-class 'basic-message-creator))
   (setf (slot-value object 'handle-message-fn)
-	(compile-handle-message-fn 
+	(compile-handle-message-fn
 	 (build-handle-message-fn object)))
   (%set-message-creator (or message-creator
 			    (make-instance message-creator-class))
@@ -518,7 +518,7 @@ should descend."))
 (defmethod create-message-for-sender ((sender basic-sender) message args)
   (create-message-for-sender (message-creator sender) message args))
 
-(defmethod create-message-for-sender ((creator basic-message-creator) 
+(defmethod create-message-for-sender ((creator basic-message-creator)
 				      message args)
   (if args
       (apply #'format nil message args)
@@ -534,7 +534,7 @@ should descend."))
    (expanded-specification :initform nil :reader expanded-specification))
   (:documentation "A sender that responds only to certain log categories."))
 
-(defmethod initialize-instance :after ((object sender-with-categories) &key 
+(defmethod initialize-instance :after ((object sender-with-categories) &key
 				       )
   (initialize-category-spec object))
 
@@ -547,7 +547,7 @@ should descend."))
 (defun make-active-category-array (sender)
   (let* ((size (hash-table-count *category-specs*))
 	 (array (make-category-array size)))
-    (maphash 
+    (maphash
      (lambda (name category)
        (declare (ignore name))
        (setf (sbit array (category-id category))
@@ -578,7 +578,7 @@ should descend."))
 	(loop for index from current-max-id to max-id do
 	     (setf (sbit new-array index)
 		   (if (sender-responds-to-category-p
-			(expanded-specification sender) 
+			(expanded-specification sender)
 			(id->category index)) 1 0)))
 	(setf (slot-value sender 'active-categories)
 	      new-array)
@@ -620,20 +620,20 @@ should descend."))
       (compile nil fn))
   #-allegro
   (compile nil fn))
-  
+
 (defun build-handle-message-fn (sender)
   `(lambda (category-id sender message)
      (declare (ignorable category-id sender message))
      (let (,@(create-handle-message-context sender))
        (unwind-protect
 	    (progn
-	      ,@(start-handling sender) 
-	      ,@(loop for name in (output-spec sender) 
-		   for output = (valid-output-p name) 
+	      ,@(start-handling sender)
+	      ,@(loop for name in (output-spec sender)
+		   for output = (valid-output-p name)
 		   for first? = t then nil
 		   unless output do (error 'output-not-found-error :name name)
 		   unless first? collect (separate-properties sender)
-		   when output collect 
+		   when output collect
 		   (handle-output sender output)))
 	 ,@(finish-handling sender)))))
 
@@ -667,7 +667,7 @@ should descend."))
 (defmethod create-handle-message-context ((sender stream-sender-mixin))
   `((stream (make-string-output-stream))))
 
-(defmethod start-handling ((sender stream-sender-mixin)) 
+(defmethod start-handling ((sender stream-sender-mixin))
   `((ensure-stream-open sender)))
 
 (defmethod finish-handling ((sender stream-sender-mixin))
@@ -676,7 +676,7 @@ should descend."))
 	(when (typep output 'file-stream)
 	  (file-position output :end))
 	(fresh-line output)
-	(princ (get-output-stream-string stream) output) 
+	(princ (get-output-stream-string stream) output)
 	(terpri output)
 	(force-output output)))))
 
@@ -684,7 +684,7 @@ should descend."))
 (defmethod create-handle-message-context ((sender stream-sender-mixin))
   `((stream (output-stream sender))))
 
-(defmethod start-handling ((sender stream-sender-mixin)) 
+(defmethod start-handling ((sender stream-sender-mixin))
   `((when (typep stream 'file-stream)
       (file-position stream :end))
     (fresh-line stream)))
@@ -700,7 +700,7 @@ should descend."))
   (cond ((eq output 'message)
 	 `(progn (princ message stream)))
 	((eq output 'category)
-	 `(progn 
+	 `(progn
 	    (let ((category (id->category category-id)))
 	      (if category
 		  (princ (category-specification category) stream)
@@ -748,7 +748,10 @@ should descend."))
 		     (ensure-directories-exist location)
 		     (open location :direction :output
 			   :if-does-not-exist :create
-			   :if-exists :append 
+			   :if-exists :append
+                           ;; enable sharing between threads on
+                           ;; Clozure CL
+                           #+ccl :sharing #+ccl :lock
 			   #+(or) (if reset-log? :supersede :append)))
 		    (t (error "don't know how to log to ~a" location)))))))
 
@@ -778,14 +781,14 @@ should descend."))
 	(setf result (make-new)))
       result)))
 
-(defun debugging (&optional category-spec &key 
-		  (output-spec nil supplied?) reset?) 
+(defun debugging (&optional category-spec &key
+		  (output-spec nil supplied?) reset?)
   (let ((output-spec (when output-spec
-		       (if (consp output-spec) 
+		       (if (consp output-spec)
 			   output-spec (list output-spec)))))
     (unless (find 'message output-spec)
       (setf output-spec (append output-spec '(message))))
-    (let ((console (if supplied? 
+    (let ((console (if supplied?
 		       (find-or-create-debug-console output-spec)
 		       (find-or-create-debug-console))))
       (when reset?
@@ -795,7 +798,7 @@ should descend."))
 	(let ((current-specs (specs console)))
 	  (handler-case
 	      (progn
-		(setf (specs console) 
+		(setf (specs console)
 		      (cond ((specs console)
 			     (if (find category-spec (specs console)
 				       :test #'equal)
@@ -814,28 +817,28 @@ should descend."))
 (defun undebugging (&optional category-spec)
   (let ((console (find-or-create-debug-console)))
     (cond (category-spec
-	   (setf (specs console) 
+	   (setf (specs console)
 		 (remove category-spec (specs console) :test #'equal)))
 	  (t
 	   (setf (specs console) nil)))
     (setf (slot-value console 'category-spec) (specs console))
     (initialize-category-spec console)
-    console))  
-  
-;;;;; messages 
+    console))
+
+;;;;; messages
 
 (defun %log-p (category-spec)
   (and
    (not (member :no-logging *features*))
    (let ((compile-spec (log5-expanded-compile-category-spec (log-manager))))
      (or (null compile-spec)
-	 (sender-responds-to-category-p 
-	  compile-spec 
+	 (sender-responds-to-category-p
+	  compile-spec
 	  (update-category-spec nil category-spec))))))
 
 (defmacro log-for (category-spec message &rest args)
   (if (%log-p category-spec)
-      `(let ((category (load-time-value 
+      `(let ((category (load-time-value
 			(update-category-spec nil ',category-spec)
 			t)))
 	 (handle-message
@@ -846,7 +849,7 @@ should descend."))
 
 (defmacro when-logging (category-spec &body body)
   (if (%log-p category-spec)
-      `(let ((category (load-time-value 
+      `(let ((category (load-time-value
 			(update-category-spec nil ',category-spec)
 			t)))
 	 (when (active-category-p (category-id category))
@@ -858,7 +861,7 @@ should descend."))
 (defmacro log-if (predicate category-spec message &rest args)
   (declare (dynamic-extent args))
   (if (%log-p category-spec)
-      `(when ,predicate 
+      `(when ,predicate
 	(log-for ,category-spec ,message ,@args))
       `(values)))
 
@@ -906,7 +909,7 @@ should descend."))
   (if (%log-p category-spec)
       `(flet ((do-it ()
 		,@body))
-	 (let ((category (load-time-value 
+	 (let ((category (load-time-value
 			  (update-category-spec nil ',category-spec)
 			  t)))
 	   (if (active-category-p (category-id category))
@@ -924,7 +927,7 @@ should descend."))
                     (list list))
                    ((dotted-pair-p list)
                     (nconc (rec (car list)) (rec (cdr list))))
-                   (t               
+                   (t
                     (mapcan #'rec list)))))
     (declare (dynamic-extent (function rec)))
     (if (atom list)
@@ -936,4 +939,3 @@ should descend."))
   (and (consp putative-pair)
        (cdr putative-pair)
        (not (consp (cdr putative-pair)))))
-
